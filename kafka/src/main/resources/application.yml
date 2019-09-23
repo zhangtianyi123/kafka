@@ -1,2 +1,26 @@
 server:
-  port: 8010
+  port: 8011
+  
+spring:
+  kafka:
+    # Kafka server地址，集群逗号隔开
+    bootstrap-servers: 192.168.192.202:9092
+    producer:
+      # 生产者失败重发次数
+      retries: 0
+      # 批量累积发送消息的阈值
+      batch-size: 3
+      # 0,1,all  1代表写入本地日志但不等待副本确认
+      acks: 1
+      # 序列化编解码方式
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: testGroup
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      auto-commit-interval: 100
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      
+      
