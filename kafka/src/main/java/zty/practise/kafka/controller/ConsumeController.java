@@ -8,7 +8,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConsumeController {
 
 	@KafkaListener(topics = "topicA")
-    public void onMessage(ConsumerRecord<?, ?> record) throws Exception {
-        System.out.printf("consume: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
+    public void onMessageA(ConsumerRecord<?, ?> record) throws Exception {
+        System.out.printf("consumeA: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
+    }
+	
+	
+	@KafkaListener(topics = "topicB")
+    public void onMessageB(ConsumerRecord<?, ?> record) throws Exception {
+        System.out.printf("consumeB: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
+    }
+	
+	@KafkaListener(topics = "topicC")
+    public void onMessageC(ConsumerRecord<?, ?> record) throws Exception {
+        System.out.printf("consumeC: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
     }
 }
