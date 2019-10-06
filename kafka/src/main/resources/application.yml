@@ -14,13 +14,15 @@ spring:
       acks: 1
       # 序列化编解码方式
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: zty.practise.kafka.serialize.RequestEntitySerializer
+      #value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
       group-id: testGroup
       auto-offset-reset: earliest
       enable-auto-commit: true
       auto-commit-interval: 100
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: zty.practise.kafka.serialize.RequestEntityDeserializer
+      #value-serializer: org.apache.kafka.common.serialization.StringSerializer
       
       
