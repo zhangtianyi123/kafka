@@ -17,7 +17,6 @@ public class StreamUpperAndBranchApp {
 	/**
 	 * 处理1：小写转大写
 	 * 处理2：根据含有B/C字符条件分支到不同的流
-	 * @param args
 	 */
 	public static void main(String[] args) {
 		Properties props = new Properties();

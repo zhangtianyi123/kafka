@@ -13,7 +13,6 @@ public class StreamUpperApp {
 	/**
 	 * 处理1：小写转大写
 	 * 处理2：过滤掉不包含B字符的记录
-	 * @param args
 	 */
 	public static void main(String[] args) {
 		Properties props = new Properties();
@@ -27,7 +26,6 @@ public class StreamUpperApp {
 		KStream<String, String> simpleFirstStream = builder.stream("topicA");
 
 		ForeachAction<String, String> purchaseForeachAction = (key, value) -> System.out.println(key);
-		
 		
 		KStream<String, String> upperStream = simpleFirstStream.mapValues(s -> s.toUpperCase());
 		upperStream.filter((key, value) -> value.contains("B"))

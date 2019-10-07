@@ -18,4 +18,10 @@ public class ProduceController {
         kafkaTemplate.send("topicA",message);
         return "send success: " + message;
     }
+	
+	@GetMapping("/message/sendwithkey")
+    public String sendwithkey(@RequestParam String message, @RequestParam String key){
+        kafkaTemplate.send("topicA", key, message);
+        return "send success: " + message;
+    }
 }
