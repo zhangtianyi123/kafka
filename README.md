@@ -151,19 +151,24 @@ public class StreamUpperAndBranchApp {
 
 生产者：
 http://localhost:8011/message/send?message=aaa
+
 消费者：
 consumeA: topic = topicA, offset = 7, value = aaa 
 
 生产者：
 http://localhost:8011/message/send?message=aab
+
 消费者：
 consumeA: topic = topicA, offset = 8, value = aab 
+
 consumeB: topic = topicB, offset = 3, value = AAB 
 
 生产者：
 http://localhost:8011/message/send?message=aac
+
 消费者：
 consumeA: topic = topicA, offset = 9, value = aac 
+
 consumeC: topic = topicC, offset = 0, value = AAC 
 
 ### StreamUpperForeachApp
@@ -199,11 +204,15 @@ public class StreamUpperForeachApp {
 ```
 
 生产端：http://localhost:8011/message/send?message=abc
+
 消费端：consumeA: topic = topicA, offset = 13, value = abc 
+
 流计算端：@key=null
 
 生产端：http://localhost:8011/message/sendwithkey?message=abc&key=001
+
 消费端：consumeA: topic = topicA, offset = 14, value = abc 
+
 流计算端：@key=001
 
 ### StreamUpperEntityApp
@@ -277,8 +286,10 @@ public class StreamUpperEntityApp {
 ```
 
 生产者：http://localhost:8011/send
+
 消费者：
 consumeA: topic = topicA, offset = 15, value = {"eventName":"2019-10-07T14:28:14.371","lotName":"15447","procName":"H;+5J","reqId":"0"} 
+
 consumeD: topic = topicD, offset = 0, value = 15447 
 
 
@@ -390,16 +401,26 @@ public class WordCountApp {
 
 生产者1：（this ia a hello）
 http://localhost:8011/message/send?message=this%20is%20a%20hello
+
 消费者1：
 consumeA: topic = topicA, offset = 1, value = this is a hello 
+
 consumeE: topic = topicE, offset = 57, value = 1 
+
 consumeE: topic = topicE, offset = 58, value = 1 
+
 consumeE: topic = topicE, offset = 59, value = 1 
+
 consumeE: topic = topicE, offset = 60, value = 1
+
 生产者2：（say hello again）
 http://localhost:8011/message/send?message=say%20hello%20again
+
 消费者2：
 consumeA: topic = topicA, offset = 2, value = say hello again 
+
 consumeE: topic = topicE, offset = 61, value = 1 
+
 consumeE: topic = topicE, offset = 62, value = 2 （key=hello）
+
 consumeE: topic = topicE, offset = 63, value = 1
