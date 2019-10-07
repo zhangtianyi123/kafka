@@ -35,7 +35,7 @@ public class WordCountApp {
 	            .flatMapValues(textLine -> Arrays.asList(textLine.toLowerCase().split("\\W+")))
 	            .groupBy((key, word) -> word)
 	            .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("counts-store"));
-		wordCounts.toStream().to("topicD", Produced.with(Serdes.String(), Serdes.Long()));
+		wordCounts.toStream().to("topicE", Produced.with(Serdes.String(), Serdes.Long()));
 		
 		KafkaStreams streams = new KafkaStreams(builder.build(), props);
         streams.start();
