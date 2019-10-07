@@ -36,7 +36,7 @@ public class StreamUpperEntityApp {
 
 		
 		KStream<String, String> upperStream = simpleFirstStream.mapValues( requestEntity -> requestEntity.getLotName());
-		upperStream.to("topicB");
+		upperStream.to("topicD");
 
 		KafkaStreams streams = new KafkaStreams(builder.build(), props);
         streams.start();
