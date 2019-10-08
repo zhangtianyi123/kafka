@@ -1,5 +1,6 @@
 # Kafka and Kafka Stream
 
+
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -424,3 +425,100 @@ consumeE: topic = topicE, offset = 61, value = 1
 consumeE: topic = topicE, offset = 62, value = 2 （key=hello）
 
 consumeE: topic = topicE, offset = 63, value = 1
+
+### FlatMapApp
+
+使用filterNot-flatMap-flatMapValues等API
+
+需要声明Kafka的源topic的生产者序列化方式为String+Long
+
+```
+public class FlatMapApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "upper_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//比如："Hello Zhangty", 3L
+		//注意明确指定Serde 否则会默认启用配置
+		KStream<String, Long> simpleFirstStream = builder.stream("topicH", Consumed.with(Serdes.String(), Serdes.Long()));
+		
+		//反向过滤,黑名单，布尔型
+		KStream<String, Long> filterStream = simpleFirstStream.filterNot((key, value) -> value < 0);
+		
+		//一对N的映射，key,value包括类型均可修改，返回键值对列表
+		KStream<String, String> flatMapStream = simpleFirstStream.flatMap((key, value) -> {
+			List<KeyValue<String, String>> result = Lists.newLinkedList();
+			result.add(KeyValue.pair("upper", key.toUpperCase()));
+			result.add(KeyValue.pair("lower", key.toLowerCase()));
+			return result;
+		});
+		
+		//一对N的映射，value包括类型均可修改，key不能修改，故而不会改变数据分区，返回value的列表（类似ETL中行转列的操作）
+		KStream<String, String> flatMapValueStream = flatMapStream.flatMapValues(value -> Arrays.asList(value.split("\\s+")));
+
+		flatMapValueStream.foreach((key, value) -> System.out.println("key=" + key + ",value=" +value));
+
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+}
+```
+
+生产者：
+http://localhost:8011/longmessage/sendwithkey?key=Hello%20Zhangty
+即（“Hello Zhangty”, 3L）
+
+流计算结果：
+key=upper,value=HELLO 
+key=upper,value=ZHANGTY 
+key=lower,value=hello 
+key=lower,value=zhangty 
+
+### MapApp
+
+```
+public class MapApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "upper_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//"Zhangty", 3L
+		KStream<String, Long> simpleFirstStream = builder.stream("topicH", Consumed.with(Serdes.String(), Serdes.Long()));
+		
+		//map,一对一的转化
+		KStream<String, String> mapStream = simpleFirstStream.map((key, value) -> KeyValue.pair(key.toLowerCase(), key.toUpperCase()));
+		
+		//mapValue，一对一转化，不涉及key
+		KStream<String, String> mapValueStream = mapStream.mapValues(value -> "upper" + value);
+		
+		//peek,与foreach类似，无状态的操作，但不是终端操作不会中断流
+		KStream<String, String> peekStream = mapValueStream.peek((key, value) -> System.out.println("peek:key=" + key +", value=" + value));
+		
+		//selectKey,修改key
+		KStream<String, String> keyStream = peekStream.selectKey((key, value) -> value);
+		
+		keyStream.foreach((key, value) -> System.out.println("print:key=" + key + ",value=" +value));
+
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+}
+```
+
+生产者：
+http://localhost:8011/longmessage/sendwithkey?key=Hello
+即（“Hello”, 3L）
+
+流计算结果：
+peek:key=hello, value=upperHELLO 
+print:key=upperHELLO,value=upperHELLO
