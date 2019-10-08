@@ -9,6 +9,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 
 public class MapApp {
@@ -22,21 +23,21 @@ public class MapApp {
 
 		StreamsBuilder builder = new StreamsBuilder();
 		//"Zhangty", 3L
-		KStream<String, Long> simpleFirstStream = builder.stream("topicB");
+		KStream<String, Long> simpleFirstStream = builder.stream("topicH", Consumed.with(Serdes.String(), Serdes.Long()));
 		
-		//map
+		//map,一对一的转化
 		KStream<String, String> mapStream = simpleFirstStream.map((key, value) -> KeyValue.pair(key.toLowerCase(), key.toUpperCase()));
 		
-		//mapValue
+		//mapValue，一对一转化，不涉及key
 		KStream<String, String> mapValueStream = mapStream.mapValues(value -> "upper" + value);
 		
-		//peek
-		KStream<String, String> peekStream = mapValueStream.peek((key, value) -> System.out.println("key=" + key +", value=" + value));
+		//peek,与foreach类似，无状态的操作，但不是终端操作不会中断流
+		KStream<String, String> peekStream = mapValueStream.peek((key, value) -> System.out.println("peek:key=" + key +", value=" + value));
 		
-		//selectKey
+		//selectKey,修改key
 		KStream<String, String> keyStream = peekStream.selectKey((key, value) -> value);
 		
-		keyStream.to("topicB");
+		keyStream.foreach((key, value) -> System.out.println("print:key=" + key + ",value=" +value));
 
 		KafkaStreams streams = new KafkaStreams(builder.build(), props);
         streams.start();
