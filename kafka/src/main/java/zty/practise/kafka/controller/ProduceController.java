@@ -24,4 +24,16 @@ public class ProduceController {
         kafkaTemplate.send("topicA", key, message);
         return "send success: " + message;
     }
+	
+	/**
+	 * (String key, Long message)
+	 * @param message
+	 * @param key
+	 * @return
+	 */
+	@GetMapping("/longmessage/sendwithkey")
+    public String sendLongMessagewithkey(@RequestParam String key){
+        kafkaTemplate.send("topicH", key, 3L);
+        return "send success: " + key;
+    }
 }
