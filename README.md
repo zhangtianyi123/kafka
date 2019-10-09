@@ -1,6 +1,5 @@
 # Kafka and Kafka Stream
 
-
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -668,3 +667,152 @@ consumeE: topic = topicE, offset = 191, key = this, value = 1, time= 2019-10-08 
 consumeE: topic = topicE, offset = 192, key = is, value = 1, time= 2019-10-08 20:30:35 
 consumeE: topic = topicE, offset = 193, key = a, value = 1, time= 2019-10-08 20:30:35 
 consumeE: topic = topicE, offset = 194, key = hello, value = 1, time= 2019-10-08 20:30:35 
+
+### CountWindowApp
+
+按照每个时间窗口统计分组键key的数量, 通过count(By Window) 实现单词计数
+
+```
+public class CountWindowApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wordcount_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		//消息key-value对的默认序列化和反序列
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//源topic
+		KStream<String, String> textLines = builder.stream("topicA");
+
+		//无状态的分组操作转为KGroupedStream
+		KGroupedStream<String, String> wordGroupedStream = textLines
+	            .flatMapValues(textLine -> Arrays.asList(textLine.toLowerCase().split("\\W+")))
+	            .groupBy((key, word) -> word);
+		
+		//KGroupedStream执行聚合转为KTable
+		KTable<Windowed<String>, Long> wordTimeWindowAggregatedStream = wordGroupedStream
+				.windowedBy(TimeWindows.of(TimeUnit.MINUTES.toMillis(1)))
+				.count(); 
+		
+		//KTable -> KStream
+		wordTimeWindowAggregatedStream.toStream()
+		.map((k, v) -> new KeyValue<>(k.key(), v))
+		.to("topicE", Produced.with(Serdes.String(), Serdes.Long()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+}
+```
+
+实现与AggregateWindowApp相同的功能
+
+测试：
+http://localhost:8011/message/send?message=this%20is%20a%20hello
+
+### ReduceApp
+
+滚动的聚合，通过分组的key组合记录的值，将每一个当前值与上一个reduce的值合并，并返回新的reduce值，**与聚合不同的是，结果值类型无法更改**。
+
+由于reduce无法更改值类型，提前使用map转换key,value值和类型（String -> Long）
+由于不修改key,使用groupByKey 替换 groupBy 实现分组
+
+```
+public class ReduceApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wordcount_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		//消息key-value对的默认序列化和反序列
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.Long().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//源topic
+		KStream<String, String> textLines = builder.stream("topicA", Consumed.with(Serdes.String(), Serdes.String()));
+
+		//无状态的分组操作转为KGroupedStream
+		KStream<String, String> wordSplitStream = textLines
+	            .flatMapValues(textLine -> Arrays.asList(textLine.toLowerCase().split("\\W+")));
+		
+		KGroupedStream<String, Long> wordGroupedStream = wordSplitStream
+				//map转换key,value值和类型，因为reduce无法更改值类型
+				.map((key, value) -> KeyValue.pair(value, 1L))
+	            //由于不修改key,使用groupByKey 替换 groupBy
+	            .groupByKey();
+		
+		//KGroupedStream执行聚合转为KTable
+		//reduce 没有初始化器，也不能转换值
+		KTable<String, Long> wordAggregatedStream = wordGroupedStream.reduce(
+			    (aggValue, newValue) -> aggValue + newValue,
+			    Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("reduce-aggregated-store")
+			    .withValueSerde(Serdes.Long())); 
+		
+		//KTable -> KStream
+		wordAggregatedStream.toStream().to("topicE", Produced.with(Serdes.String(), Serdes.Long()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+}
+```
+
+测试：
+http://localhost:8011/message/send?message=this%20is%20a%20hello
+
+
+### ReduceWindowApp
+
+基于时间窗口的reduce操作实现单词计数的功能
+
+相对于非窗口的ReduceApp需要增加windowedBy
+进而修改state store的类型Materialized.<String, Long, WindowStore<Bytes, byte[]>>
+输出流通过map修改键的类型map((k, v) -> new KeyValue<>(k.key(), v))
+
+```
+public class ReduceWindowApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wordcount_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		//消息key-value对的默认序列化和反序列
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.Long().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//源topic
+		KStream<String, String> textLines = builder.stream("topicA", Consumed.with(Serdes.String(), Serdes.String()));
+
+		//无状态的分组操作转为KGroupedStream
+		KStream<String, String> wordSplitStream = textLines
+	            .flatMapValues(textLine -> Arrays.asList(textLine.toLowerCase().split("\\W+")));
+		
+		KGroupedStream<String, Long> wordGroupedStream = wordSplitStream
+				//map转换key,value值和类型，因为reduce无法更改值类型
+				.map((key, value) -> KeyValue.pair(value, 1L))
+	            //由于不修改key,使用groupByKey 替换 groupBy
+	            .groupByKey();
+		
+		//KGroupedStream执行聚合转为KTable
+		//reduce 没有初始化器，也不能转换值
+		KTable<Windowed<String>, Long> wordAggregatedStream = wordGroupedStream
+				.windowedBy(TimeWindows.of(TimeUnit.MINUTES.toMillis(1)))
+				.reduce((aggValue, newValue) -> aggValue + newValue,
+			    Materialized.<String, Long, WindowStore<Bytes, byte[]>>as("reduce-timewindow--aggregated-store")
+			    .withValueSerde(Serdes.Long())); 
+		
+		//KTable -> KStream
+		wordAggregatedStream.toStream()
+		.map((k, v) -> new KeyValue<>(k.key(), v))
+		.to("topicE", Produced.with(Serdes.String(), Serdes.Long()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+}
+```
