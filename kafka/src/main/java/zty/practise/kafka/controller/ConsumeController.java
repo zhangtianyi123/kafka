@@ -1,5 +1,8 @@
 package zty.practise.kafka.controller;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,6 +32,9 @@ public class ConsumeController {
 	
 	@KafkaListener(topics = "topicE")
     public void onMessageE(ConsumerRecord<?, ?> record) throws Exception {
-        System.out.printf("consumeE: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
+		String strDateFormat = "yyyy-MM-dd HH:mm:ss";
+        SimpleDateFormat sdf = new SimpleDateFormat(strDateFormat);
+        System.out.printf("consumeE: topic = %s, offset = %d, key = %s, value = %s, time= %s \n", 
+        		record.topic(), record.offset(), record.key(), record.value(), sdf.format(new Date(record.timestamp())));
     }
 }

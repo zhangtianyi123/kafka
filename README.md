@@ -1,5 +1,6 @@
 # Kafka and Kafka Stream
 
+
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -573,3 +574,97 @@ public class AggregateApp {
 
 测试参考WordCountApp，功能测试结果相同
 通过aggregate 实现 count的功能
+生产者
+http://localhost:8011/message/send?message=this%20is%20a%20hello
+
+发第一次
+
+consumeA: topic = topicA, offset = 41, value = this is a hello 
+
+consumeE: topic = topicE, offset = 179, key = this, value = 12, time= 2019-10-09 14:22:58 
+
+consumeE: topic = topicE, offset = 180, key = is, value = 11, time= 2019-10-09 14:22:58 
+
+consumeE: topic = topicE, offset = 181, key = a, value = 12, time= 2019-10-09 14:22:58 
+
+consumeE: topic = topicE, offset = 182, key = hello, value = 13, time= 2019-10-09 14:22:58
+
+连发两次consumeA: topic = topicA, offset = 41, value = this is a hello 
+
+consumeA: topic = topicA, offset = 42, value = this is a hello 
+
+consumeA: topic = topicA, offset = 43, value = this is a hello 
+
+consumeE: topic = topicE, offset = 183, key = this, value = 12 
+
+consumeE: topic = topicE, offset = 184, key = is, value = 11
+
+consumeE: topic = topicE, offset = 185, key = a, value = 12
+
+consumeE: topic = topicE, offset = 186, key = hello, value = 13
+
+### AggregateApp
+
+通过Aggregate(By Window) 实现单词计数，基于每个窗口对记录值进行聚合
+
+```
+public class AggregateWindowApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wordcount_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		//消息key-value对的默认序列化和反序列
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//源topic
+		KStream<String, String> textLines = builder.stream("topicA");
+
+		//无状态的分组操作转为KGroupedStream
+		KGroupedStream<String, String> wordGroupedStream = textLines
+	            .flatMapValues(textLine -> Arrays.asList(textLine.toLowerCase().split("\\W+")))
+	            .groupBy((key, word) -> word);
+		
+		//KGroupedStream执行聚合转为KTable
+		KTable<Windowed<String>, Long> wordTimeWindowAggregatedStream = wordGroupedStream
+				.windowedBy(TimeWindows.of(TimeUnit.MINUTES.toMillis(1)))
+				.aggregate(
+			    () -> 0L, 
+			    (aggKey, newValue, aggValue) -> aggValue + 1L,
+			    Materialized.<String, Long, WindowStore<Bytes, byte[]>>as("time-windowed-aggregated-store")
+			    .withValueSerde(Serdes.Long())); 
+		
+		//KTable -> KStream
+		wordTimeWindowAggregatedStream.toStream()
+		.map((k, v) -> new KeyValue<>(k.key(), v))
+		.to("topicE", Produced.with(Serdes.String(), Serdes.Long()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+}
+```
+
+生产者：
+http://localhost:8011/message/send?message=this%20is%20a%20hello
+
+消费者：
+consumeA: topic = topicA, offset = 42, value = this is a hello         
+consumeA: topic = topicA, offset = 43, value = this is a hello   
+consumeE: topic = topicE, offset = 183, key = this, value = 2, time= 2019-10-08 20:29:34 
+consumeE: topic = topicE, offset = 184, key = is, value = 2, time= 2019-10-08 20:29:34  
+consumeE: topic = topicE, offset = 185, key = a, value = 2, time= 2019-10-08 20:29:34  
+consumeE: topic = topicE, offset = 186, key = hello, value = 2, time= 2019-10-08 20:29:34  <br/>
+consumeA: topic = topicA, offset = 44, value = this is a hello                    
+consumeE: topic = topicE, offset = 187, key = this, value = 3, time= 2019-10-08 20:29:46  
+consumeE: topic = topicE, offset = 188, key = is, value = 3, time= 2019-10-08 20:29:46 
+consumeE: topic = topicE, offset = 189, key = a, value = 3, time= 2019-10-08 20:29:46 
+consumeE: topic = topicE, offset = 190, key = hello, value = 3, time= 2019-10-08 20:29:46 <br/>
+**基于新的时间窗口重新计数**
+consumeA: topic = topicA, offset = 45, value = this is a hello 
+consumeE: topic = topicE, offset = 191, key = this, value = 1, time= 2019-10-08 20:30:35 
+consumeE: topic = topicE, offset = 192, key = is, value = 1, time= 2019-10-08 20:30:35 
+consumeE: topic = topicE, offset = 193, key = a, value = 1, time= 2019-10-08 20:30:35 
+consumeE: topic = topicE, offset = 194, key = hello, value = 1, time= 2019-10-08 20:30:35 
