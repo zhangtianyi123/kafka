@@ -102,13 +102,16 @@ public class StreamUpperApp {
 生产端：
 http://localhost:8011/message/send?message=abcde
 消费端：
-consumeA: topic = topicA, offset = 5, value = abcde 
-consumeB: topic = topicB, offset = 2, value = ABCDE 
+
+- consumeA: topic = topicA, offset = 5, value = abcde 
+- consumeB: topic = topicB, offset = 2, value = ABCDE 
 
 生产端：
 http://localhost:8011/message/send?message=acde
+
 消费端：
-consumeA: topic = topicA, offset = 6, value = acde 
+
+- consumeA: topic = topicA, offset = 6, value = acde 
 
 
 ### StreamUpperAndBranchApp
@@ -153,15 +156,16 @@ public class StreamUpperAndBranchApp {
 http://localhost:8011/message/send?message=aaa
 
 消费者：
-consumeA: topic = topicA, offset = 7, value = aaa 
+
+- consumeA: topic = topicA, offset = 7, value = aaa 
 
 生产者：
 http://localhost:8011/message/send?message=aab
 
 消费者：
-consumeA: topic = topicA, offset = 8, value = aab 
 
-consumeB: topic = topicB, offset = 3, value = AAB 
+- consumeA: topic = topicA, offset = 8, value = aab 
+- consumeB: topic = topicB, offset = 3, value = AAB 
 
 生产者：
 http://localhost:8011/message/send?message=aac
@@ -203,17 +207,13 @@ public class StreamUpperForeachApp {
 }
 ```
 
-生产端：http://localhost:8011/message/send?message=abc
+- 生产端：http://localhost:8011/message/send?message=abc
+- 消费端：consumeA: topic = topicA, offset = 13, value = abc 
+- 流计算端：@key=null
 
-消费端：consumeA: topic = topicA, offset = 13, value = abc 
-
-流计算端：@key=null
-
-生产端：http://localhost:8011/message/sendwithkey?message=abc&key=001
-
-消费端：consumeA: topic = topicA, offset = 14, value = abc 
-
-流计算端：@key=001
+- 生产端：http://localhost:8011/message/sendwithkey?message=abc&key=001
+- 消费端：consumeA: topic = topicA, offset = 14, value = abc 
+- 流计算端：@key=001
 
 ### StreamUpperEntityApp
 
@@ -288,9 +288,10 @@ public class StreamUpperEntityApp {
 生产者：http://localhost:8011/send
 
 消费者：
-consumeA: topic = topicA, offset = 15, value = {"eventName":"2019-10-07T14:28:14.371","lotName":"15447","procName":"H;+5J","reqId":"0"} 
 
-consumeD: topic = topicD, offset = 0, value = 15447 
+- consumeA: topic = topicA, offset = 15, 
+value = {"eventName":"2019-10-07T14:28:14.371","lotName":"15447","procName":"H;+5J","reqId":"0"} 
+- consumeD: topic = topicD, offset = 0, value = 15447 
 
 
 ### WordCountApp
@@ -403,27 +404,22 @@ public class WordCountApp {
 http://localhost:8011/message/send?message=this%20is%20a%20hello
 
 消费者1：
-consumeA: topic = topicA, offset = 1, value = this is a hello 
 
-consumeE: topic = topicE, offset = 57, value = 1 
-
-consumeE: topic = topicE, offset = 58, value = 1 
-
-consumeE: topic = topicE, offset = 59, value = 1 
-
-consumeE: topic = topicE, offset = 60, value = 1
+- consumeA: topic = topicA, offset = 1, value = this is a hello 
+- consumeE: topic = topicE, offset = 57, value = 1 
+- consumeE: topic = topicE, offset = 58, value = 1 
+- consumeE: topic = topicE, offset = 59, value = 1 
+- consumeE: topic = topicE, offset = 60, value = 1
 
 生产者2：（say hello again）
 http://localhost:8011/message/send?message=say%20hello%20again
 
 消费者2：
-consumeA: topic = topicA, offset = 2, value = say hello again 
 
-consumeE: topic = topicE, offset = 61, value = 1 
-
-consumeE: topic = topicE, offset = 62, value = 2 （key=hello）
-
-consumeE: topic = topicE, offset = 63, value = 1
+- consumeA: topic = topicA, offset = 2, value = say hello again 
+- consumeE: topic = topicE, offset = 61, value = 1 
+- consumeE: topic = topicE, offset = 62, value = 2 （key=hello）
+- consumeE: topic = topicE, offset = 63, value = 1
 
 ### FlatMapApp
 
@@ -474,13 +470,11 @@ http://localhost:8011/longmessage/sendwithkey?key=Hello%20Zhangty
 即（“Hello Zhangty”, 3L）
 
 流计算结果：
-key=upper,value=HELLO 
 
-key=upper,value=ZHANGTY 
-
-key=lower,value=hello 
-
-key=lower,value=zhangty 
+- key=upper,value=HELLO 
+- key=upper,value=ZHANGTY 
+- key=lower,value=hello 
+- key=lower,value=zhangty 
 
 ### MapApp
 
@@ -524,9 +518,9 @@ http://localhost:8011/longmessage/sendwithkey?key=Hello
 即（“Hello”, 3L）
 
 流计算结果：
-peek:key=hello, value=upperHELLO 
 
-print:key=upperHELLO,value=upperHELLO
+- peek:key=hello, value=upperHELLO 
+- print:key=upperHELLO,value=upperHELLO
 
 ### AggregateApp
 
@@ -578,29 +572,22 @@ http://localhost:8011/message/send?message=this%20is%20a%20hello
 
 发第一次
 
-consumeA: topic = topicA, offset = 41, value = this is a hello 
-
-consumeE: topic = topicE, offset = 179, key = this, value = 12, time= 2019-10-09 14:22:58 
-
-consumeE: topic = topicE, offset = 180, key = is, value = 11, time= 2019-10-09 14:22:58 
-
-consumeE: topic = topicE, offset = 181, key = a, value = 12, time= 2019-10-09 14:22:58 
-
-consumeE: topic = topicE, offset = 182, key = hello, value = 13, time= 2019-10-09 14:22:58
+- consumeA: topic = topicA, offset = 41, value = this is a hello 
+- consumeE: topic = topicE, offset = 179, key = this, value = 1
+- consumeE: topic = topicE, offset = 180, key = is, value = 1
+- consumeE: topic = topicE, offset = 181, key = a, value = 1
+- consumeE: topic = topicE, offset = 182, key = hello, value = 1
 
 连发两次consumeA: topic = topicA, offset = 41, value = this is a hello 
 
-consumeA: topic = topicA, offset = 42, value = this is a hello 
+- consumeA: topic = topicA, offset = 42, value = this is a hello 
+- consumeA: topic = topicA, offset = 43, value = this is a hello 
+- consumeE: topic = topicE, offset = 183, key = this, value = 3 
+- consumeE: topic = topicE, offset = 184, key = is, value = 3
+- consumeE: topic = topicE, offset = 185, key = a, value = 3
+- consumeE: topic = topicE, offset = 186, key = hello, value = 3
 
-consumeA: topic = topicA, offset = 43, value = this is a hello 
-
-consumeE: topic = topicE, offset = 183, key = this, value = 12 
-
-consumeE: topic = topicE, offset = 184, key = is, value = 11
-
-consumeE: topic = topicE, offset = 185, key = a, value = 12
-
-consumeE: topic = topicE, offset = 186, key = hello, value = 13
+> 由于默认开启记录缓存，记录的输出结果可能合并，所以不一定能看到value=1-2-3的过程，将看到从1直接变为3
 
 ### AggregateApp
 
@@ -650,23 +637,30 @@ public class AggregateWindowApp {
 http://localhost:8011/message/send?message=this%20is%20a%20hello
 
 消费者：
-consumeA: topic = topicA, offset = 42, value = this is a hello         
-consumeA: topic = topicA, offset = 43, value = this is a hello   
-consumeE: topic = topicE, offset = 183, key = this, value = 2, time= 2019-10-08 20:29:34 
-consumeE: topic = topicE, offset = 184, key = is, value = 2, time= 2019-10-08 20:29:34  
-consumeE: topic = topicE, offset = 185, key = a, value = 2, time= 2019-10-08 20:29:34  
-consumeE: topic = topicE, offset = 186, key = hello, value = 2, time= 2019-10-08 20:29:34  <br/>
-consumeA: topic = topicA, offset = 44, value = this is a hello                    
-consumeE: topic = topicE, offset = 187, key = this, value = 3, time= 2019-10-08 20:29:46  
-consumeE: topic = topicE, offset = 188, key = is, value = 3, time= 2019-10-08 20:29:46 
-consumeE: topic = topicE, offset = 189, key = a, value = 3, time= 2019-10-08 20:29:46 
-consumeE: topic = topicE, offset = 190, key = hello, value = 3, time= 2019-10-08 20:29:46 <br/>
+
+- consumeA: topic = topicA, offset = 42, value = this is a hello         
+- consumeA: topic = topicA, offset = 43, value = this is a hello   
+- consumeE: topic = topicE, offset = 183, key = this, value = 2, time= 2019-10-08 20:29:34
+- consumeE: topic = topicE, offset = 184, key = is, value = 2, time= 2019-10-08 20:29:34  
+- consumeE: topic = topicE, offset = 185, key = a, value = 2, time= 2019-10-08 20:29:34  
+- consumeE: topic = topicE, offset = 186, key = hello, value = 2, time= 2019-10-08 20:29:34  
+
+<br/>
+
+- consumeA: topic = topicA, offset = 44, value = this is a hello                    
+- consumeE: topic = topicE, offset = 187, key = this, value = 3, time= 2019-10-08 20:29:46
+- consumeE: topic = topicE, offset = 188, key = is, value = 3, time= 2019-10-08 20:29:46 
+- consumeE: topic = topicE, offset = 189, key = a, value = 3, time= 2019-10-08 20:29:46 
+- consumeE: topic = topicE, offset = 190, key = hello, value = 3, time= 2019-10-08 20:29:46
+<br/>
+
 **基于新的时间窗口重新计数**
-consumeA: topic = topicA, offset = 45, value = this is a hello 
-consumeE: topic = topicE, offset = 191, key = this, value = 1, time= 2019-10-08 20:30:35 
-consumeE: topic = topicE, offset = 192, key = is, value = 1, time= 2019-10-08 20:30:35 
-consumeE: topic = topicE, offset = 193, key = a, value = 1, time= 2019-10-08 20:30:35 
-consumeE: topic = topicE, offset = 194, key = hello, value = 1, time= 2019-10-08 20:30:35 
+
+- consumeA: topic = topicA, offset = 45, value = this is a hello 
+- consumeE: topic = topicE, offset = 191, key = this, value = 1, time= 2019-10-08 20:30:35
+- consumeE: topic = topicE, offset = 192, key = is, value = 1, time= 2019-10-08 20:30:35 
+- consumeE: topic = topicE, offset = 193, key = a, value = 1, time= 2019-10-08 20:30:35 
+- consumeE: topic = topicE, offset = 194, key = hello, value = 1, time= 2019-10-08 20:30:35 
 
 ### CountWindowApp
 
@@ -816,3 +810,80 @@ public class ReduceWindowApp {
 	}
 }
 ```
+
+### AggregateTableApp
+
+编写一个球员转会的例子，来展示KTable表的聚合操作
+
+```
+public class AggregateTableApp {
+	
+	private static Map<String, Long> playerAndSalary  = Maps.newHashMap();
+	
+	static {
+		playerAndSalary.put("james", 5000L);
+		playerAndSalary.put("kobe", 4000L);
+		playerAndSalary.put("davis", 3000L);
+	}
+	
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wordcount_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//以表的形式接收流数据  eg:("james", "laker") 
+		KTable<String, String> playerAndTeams = builder.table("topicA");
+		
+		//按照球队分组球员，value关注球员的工资薪水
+		KGroupedTable<String, Long> groupedTable = playerAndTeams
+				.groupBy((player, team) -> KeyValue.pair(team, playerAndSalary.get(player)), Serialized.with(
+					      Serdes.String(), 
+					      Serdes.Long()));
+		
+		//KGroupedStream执行聚合转为KTable
+		KTable<String, Long> teamAggregatedTable = groupedTable.aggregate(
+			    () -> 0L, 
+			    (aggKey, newValue, aggValue) -> aggValue + newValue,
+			    (aggKey, oldValue, aggValue) -> aggValue - oldValue,
+			    Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("aggregated-table-store")
+			    .withKeySerde(Serdes.String())
+			    .withValueSerde(Serdes.Long())); 
+		
+		//KTable -> KStream
+		teamAggregatedTable.toStream().to("topicE", Produced.with(Serdes.String(), Serdes.Long()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+
+}
+```
+
+按照时间顺序的测试数据以及消费结果：
+
+- james,laker
+consumeE: topic = topicE, offset = 227, key = laker, value = 5000
+- kobe,cavs
+consumeE: topic = topicE, offset = 228, key = cavs, value = 4000
+- davis,cavs
+consumeE: topic = topicE, offset = 229, key = cavs, value = 7000
+- james,cavs
+consumeE: topic = topicE, offset = 230, key = laker, value = 0
+consumeE: topic = topicE, offset = 231, key = cavs, value = 12000
+- davis,null
+consumeE: topic = topicE, offset = 232, key = cavs, value = 9000
+- null,laker
+[ignore]
+- kobe,laker
+consumeE: topic = topicE, offset = 233, key = cavs, value = 5000
+consumeE: topic = topicE, offset = 234, key = laker, value = 4000
+
+过程说明图：
+
+![image_1dmo5gg2v1kntevia08svd1rq69.png-23.5kB][1]
+
+
+  [1]: http://static.zybuluo.com/zhangtianyi/e6quts74wyf2ljunkmmng90b/image_1dmo5gg2v1kntevia08svd1rq69.png

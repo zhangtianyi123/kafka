@@ -20,7 +20,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
  * 
  * 通过Aggregate 实现单词计数
  * 
- * 在分组之后，可以通过**aggregate()/count()/reduce()**等有状态操作 
+ * 在分组之后，可以通过aggregate()/count()/reduce()等有状态操作 
  * 将KGroupedStream和KGroupedTable转回KStream和KTable
  * 
  * GroupByKey 根据已有键key分组
