@@ -15,7 +15,7 @@ spring:
       # 序列化编解码方式
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       #value-serializer: zty.practise.kafka.serialize.RequestEntitySerializer
-      value-serializer: org.apache.kafka.common.serialization.LongSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
       group-id: testGroup
       auto-offset-reset: earliest

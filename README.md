@@ -1,6 +1,5 @@
 # Kafka and Kafka Stream
 
-
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -471,12 +470,16 @@ public class FlatMapApp {
 
 生产者：
 http://localhost:8011/longmessage/sendwithkey?key=Hello%20Zhangty
+
 即（“Hello Zhangty”, 3L）
 
 流计算结果：
 key=upper,value=HELLO 
+
 key=upper,value=ZHANGTY 
+
 key=lower,value=hello 
+
 key=lower,value=zhangty 
 
 ### MapApp
@@ -517,8 +520,56 @@ public class MapApp {
 
 生产者：
 http://localhost:8011/longmessage/sendwithkey?key=Hello
+
 即（“Hello”, 3L）
 
 流计算结果：
 peek:key=hello, value=upperHELLO 
+
 print:key=upperHELLO,value=upperHELLO
+
+### AggregateApp
+
+聚合可以理解为reduce等的一般化； 通过Aggregate 实现单词计数
+
+前置配置可参考WordCountApp
+
+```
+public class AggregateApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wordcount_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		//消息key-value对的默认序列化和反序列
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//源topic
+		KStream<String, String> textLines = builder.stream("topicA");
+
+		//无状态的分组操作转为KGroupedStream
+		KGroupedStream<String, String> wordGroupedStream = textLines
+	            .flatMapValues(textLine -> Arrays.asList(textLine.toLowerCase().split("\\W+")))
+	            .groupBy((key, word) -> word);
+		
+		//KGroupedStream执行聚合转为KTable
+		KTable<String, Long> wordAggregatedStream = wordGroupedStream.aggregate(
+			    () -> 0L, 
+			    (aggKey, newValue, aggValue) -> aggValue + 1L,
+			    Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("aggregated-stream-store")
+			    .withValueSerde(Serdes.Long())); 
+		
+		//KTable -> KStream
+		wordAggregatedStream.toStream().to("topicE", Produced.with(Serdes.String(), Serdes.Long()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+}
+
+```
+
+测试参考WordCountApp，功能测试结果相同
+通过aggregate 实现 count的功能
