@@ -14,7 +14,7 @@ import zty.practise.kafka.model.RequestEntity;
 public class ProduceEntityController {
 
 	@Autowired
-    private KafkaTemplate<String, RequestEntity> kafkaTemplate;
+    private KafkaTemplate<String, RequestEntity> producerStringRequestEntityFactory;
 	
 	private static long count = 0;
 	
@@ -26,7 +26,7 @@ public class ProduceEntityController {
 		entity.setProcName(RandomStringUtils.randomAscii(5));
 		entity.setReqId((count++) + "");
 		
-        kafkaTemplate.send("topicA", entity);
+		producerStringRequestEntityFactory.send("topicA", entity);
         return "send success: " + entity;
     }
 }

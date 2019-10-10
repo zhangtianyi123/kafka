@@ -11,23 +11,29 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProduceController {
 
 	@Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaTemplate<String, String> kafkaStringStringTemplate;
+	
+	@Autowired
+    private KafkaTemplate<String, Long> kafkaStringLongTemplate;
+	
+	@Autowired
+    private KafkaTemplate<String, Double> kafkaStringDoubleTemplate;
 	
 	@GetMapping("/message/send")
     public String send(@RequestParam String message){
-        kafkaTemplate.send("topicA",message);
+		kafkaStringStringTemplate.send("topicA",message);
         return "send success: " + message;
     }
 	
 	@GetMapping("/key/send")
     public String sendKey(@RequestParam String key){
-        kafkaTemplate.send("topicA",key, null);
+		kafkaStringStringTemplate.send("topicA",key, null);
         return "send success: " +  key;
     }
 	
 	@GetMapping("/message/sendwithkey")
     public String sendwithkey(@RequestParam String message, @RequestParam String key){
-        kafkaTemplate.send("topicA", key, message);
+		kafkaStringStringTemplate.send("topicA", key, message);
         return "send success: " + message;
     }
 	
@@ -39,7 +45,19 @@ public class ProduceController {
 	 */
 	@GetMapping("/longmessage/sendwithkey")
     public String sendLongMessagewithkey(@RequestParam String key){
-        kafkaTemplate.send("topicH", key, 3L);
+		kafkaStringLongTemplate.send("topicH", key, 3L);
         return "send success: " + key;
+    }
+	
+	@GetMapping("/topicLong/message/send")
+    public String sendToLong(String key, String message){
+		kafkaStringLongTemplate.send("topicLong", key, Long.valueOf(message));
+        return "send success: " + message;
+    }
+	
+	@GetMapping("/topicDouble/message/send")
+    public String sendToDouble(String key, String message){
+		kafkaStringDoubleTemplate.send("topicDouble", key, Double.valueOf(message));
+        return "send success: " + message;
     }
 }
