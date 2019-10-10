@@ -1,5 +1,6 @@
 package zty.practise.kafka.controller;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,13 +52,13 @@ public class ProduceController {
 	
 	@GetMapping("/topicLong/message/send")
     public String sendToLong(String key, String message){
-		kafkaStringLongTemplate.send("topicLong", key, Long.valueOf(message));
+		kafkaStringLongTemplate.send("topicLong", key, StringUtils.isEmpty(message)? null : Long.valueOf(message));
         return "send success: " + message;
     }
 	
 	@GetMapping("/topicDouble/message/send")
     public String sendToDouble(String key, String message){
-		kafkaStringDoubleTemplate.send("topicDouble", key, Double.valueOf(message));
+		kafkaStringDoubleTemplate.send("topicDouble", key, StringUtils.isEmpty(message)? null : Double.valueOf(message));
         return "send success: " + message;
     }
 }
