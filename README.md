@@ -1099,6 +1099,64 @@ KStream<String, String> joinedStream = leftStream.outerJoin(rightStream,
 - **consumeA: topic = topicA, value = left=2, right=null** 
 - **consumeA: topic = topicA, value = left=null, right=1.4** 
 
+<br />
+
+**KTable-KTable Inner Join**
+
+表表连接总是基于非窗的，连接的结果是一个新的KTable
+这个结果表是一个不断更新的结果表，存储最新结果
+
+两个KTable 的changelog 流具体化到本地存储中，表示最新快照
+
+当输入的记录key为null的时候，忽略记录，不触发连接
+当输入的记录value为null的时候，表示表删除了键，不会触发连接，如果结果表已经存在这个key，将转发到结果表
+
+```
+public class TableTableInnerJoinApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "tabletableinnerjoin_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//源topic
+		KTable<String, Long> leftTable = builder.table("topicLong", Consumed.with(Serdes.String(), Serdes.Long()));
+		KTable<String, Double> rightTable = builder.table("topicDouble", Consumed.with(Serdes.String(), Serdes.Double()));
+		
+		KTable<String, String> joinedTable = leftTable.join(rightTable,
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue, /* ValueJoiner */
+			    Materialized.with(Serdes.String(), Serdes.String()));
+		
+		joinedTable.toStream().to("topicA", Produced.with(Serdes.String(), Serdes.String()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+        
+	}
+}
+```
+
+- 左流生产(a,1)
+- 右流生产(a,1.1)
+- 消费：consumeA: topic = topicA, value = left=1, right=1.1 
+- 右流生产(a,1.2)
+- 消费：consumeA: topic = topicA, value = left=1, right=1.2 
+- 右流生产(a,1.3)
+- 左流生产(a,2)
+- 消费：consumeA: topic = topicA, value = left=2, right=1.3 
+- 右流生产(a,null)
+- 消费：consumeA: topic = topicA, value = null
+- 左流生产(a,2)
+- 消费：无
+
+
+- 结果说明
+ - 第一次左流生产(a,2)的时候匹配的不是1.1 1.2 1.3 三条而是最新的1.3 这是表的更新特性
+ - 第一次左流生产(a,2)的时候直接产生（2，1.3）没有产生（1，1.3）因为缓存的存在，可能不会输出中间（过期）的连接状态
+ - 右流生产(a,null)的时候将数据a删除了，所以后面左流最后一次生产(a,2)匹配不到
 
 
 
