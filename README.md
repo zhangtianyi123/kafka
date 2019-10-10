@@ -1,5 +1,6 @@
 # Kafka and Kafka Stream
 
+
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -1159,7 +1160,37 @@ public class TableTableInnerJoinApp {
  - 右流生产(a,null)的时候将数据a删除了，所以后面左流最后一次生产(a,2)匹配不到
 
 
+**KTable-KTable Left Join**
 
+表与表的左连接与内连接类似
+特殊点在于如果左边的记录（key）在右边流中没有匹配，将调用ValueJoiner#apply(leftRecord.value, null)
+
+```
+KTable<String, String> joinedTable = leftTable.leftJoin(rightTable,
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue, 
+			    Materialized.with(Serdes.String(), Serdes.String()));
+```
+
+- 左流生产(p,1)
+- consumeA: topic = topicA, value = left=1, right=null 
+- 右流生产(q,1.1)
+- 消费无
+
+
+**KTable-KTable Outer Join**
+
+不管是表表的左连接还是外连接。其实都是相对于流流的连接把握两个特性，一个是表的特性（更新，删除）一个是左连接/外连接的特性（左匹配空/左右匹配空）
+
+```
+KTable<String, String> joinedTable = leftTable.outerJoin(rightTable,
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue, 
+			    Materialized.with(Serdes.String(), Serdes.String()));
+```
+
+- 左流生产(x,1)
+- consumeA: topic = topicA, value = left=1, right=null 
+- 右流生产(y,1.1)
+- consumeA: topic = topicA, value = left=null, right=1.1 
 
 
   [1]: http://static.zybuluo.com/zhangtianyi/e6quts74wyf2ljunkmmng90b/image_1dmo5gg2v1kntevia08svd1rq69.png
