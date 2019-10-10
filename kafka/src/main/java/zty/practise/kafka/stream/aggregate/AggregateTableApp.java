@@ -41,7 +41,7 @@ public class AggregateTableApp {
 	
 	public static void main(String[] args) {
 		Properties props = new Properties();
-		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wordcount_app_id");
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "aggregatetable_app_id");
 		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
 		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
