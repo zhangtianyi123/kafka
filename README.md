@@ -1,5 +1,6 @@
 # Kafka and Kafka Stream
 
+
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -884,6 +885,124 @@ consumeE: topic = topicE, offset = 234, key = laker, value = 4000
 过程说明图：
 
 ![image_1dmo5gg2v1kntevia08svd1rq69.png-23.5kB][1]
+
+### StreamStreamInnerJoinApp
+
+KStream-KStream的链接始终是窗口连接，因执行连接内部的状态存储将无限增长
+
+一侧的一条记录及那个会匹配另一侧每一个匹配的记录形成联结输出
+
+在时间窗口内，左右键key相等，才会出发连接进而根据ValueJoiner形成输出
+具有空键或空值的输入记录将被忽略，并且不会触发联接
+
+```
+public class StreamStreamInnerJoinApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streamstreaminnerjoin_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		//源topic
+		KStream<String, Long> leftStream = builder.stream("topicLong", Consumed.with(Serdes.String(), Serdes.Long()));
+		KStream<String, Double> rightStream = builder.stream("topicDouble", Consumed.with(Serdes.String(), Serdes.Double()));
+		
+		KStream<String, String> joinedStream = leftStream.join(rightStream,
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue, /* ValueJoiner */
+			    JoinWindows.of(TimeUnit.MINUTES.toMillis(2)),
+			    Joined.with(
+			      Serdes.String(), /* key */
+			      Serdes.Long(),   /* left value */
+			      Serdes.Double())  /* right value */
+			  );
+		
+		joinedStream.peek((key, value) -> System.out.println("joinedStream:key=" + key + ", value=" + value));
+		joinedStream.to("topicA", Produced.with(Serdes.String(), Serdes.String()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+	}
+}
+```
+
+由于涉及多个不同类型的输入源，所以自定义多个KafkaTemplate
+
+```
+@Configuration
+@EnableKafka
+public class KafkaProduceConfig {
+
+	@Value("${spring.kafka.bootstrap-servers}")
+	private String servers;
+
+	@Value("${spring.kafka.producer.retries}")
+	private String retries;
+
+	@Value("${spring.kafka.producer.batch-size}")
+	private String batchSize;
+
+	@Value("${spring.kafka.producer.acks}")
+	private String acks;
+
+	@Bean
+	public KafkaTemplate<String, String> kafkaStringStringTemplate() {
+		return new KafkaTemplate<>(producerStringStringFactory());
+	}
+
+	@Bean
+	public ProducerFactory<String, String> producerStringStringFactory() {
+		return new DefaultKafkaProducerFactory<>(setStringStringSerializerConfig());
+	}
+	private void produceComnConfigs(Map<String, Object> propsMap) {
+		propsMap.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
+		propsMap.put(ProducerConfig.RETRIES_CONFIG, retries);
+		propsMap.put(ProducerConfig.BATCH_SIZE_CONFIG, batchSize);
+		propsMap.put(ProducerConfig.ACKS_CONFIG, acks);
+	}
+
+	/**
+	 * 序列化配置-StringString
+	 */
+	private Map<String, Object> setStringStringSerializerConfig() {
+		Map<String, Object> propsMap = Maps.newHashMap();
+		produceComnConfigs(propsMap);
+
+		propsMap.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		propsMap.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		return propsMap;
+	}
+	
+	//StringLong
+	//StringDouble
+	//...
+}
+```
+
+在时间窗口内的连接测试：
+
+生产者（按照时间顺序发送）：
+
+- http://localhost:8011/topicLong/message/send?key=a&message=1 （流A）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.1  （流B）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.2  （流B）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.3  （流B）
+- http://localhost:8011/topicLong/message/send?key=a&message=2  （流A）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.4  （流B）
+
+消费者：
+
+- consumeA: topic = topicA, offset = 84, value = left=1, right=1.1 
+- consumeA: topic = topicA, offset = 85, value = left=1, right=1.2 
+- consumeA: topic = topicA, offset = 86, value = left=1, right=1.3 
+- consumeA: topic = topicA, offset = 87, value = left=2, right=1.1 
+- consumeA: topic = topicA, offset = 88, value = left=2, right=1.2 
+- consumeA: topic = topicA, offset = 89, value = left=2, right=1.3 
+- consumeA: topic = topicA, offset = 90, value = left=1, right=1.4 
+- consumeA: topic = topicA, offset = 91, value = left=2, right=1.4 
+
 
 
   [1]: http://static.zybuluo.com/zhangtianyi/e6quts74wyf2ljunkmmng90b/image_1dmo5gg2v1kntevia08svd1rq69.png
