@@ -1,6 +1,5 @@
 # Kafka and Kafka Stream
 
-
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -895,6 +894,9 @@ KStream-KStream的链接始终是窗口连接，因执行连接内部的状态�
 在时间窗口内，左右键key相等，才会出发连接进而根据ValueJoiner形成输出
 具有空键或空值的输入记录将被忽略，并且不会触发联接
 
+innerjoin只会连接key相同匹配到的记录
+
+
 ```
 public class StreamStreamInnerJoinApp {
 
@@ -985,23 +987,120 @@ public class KafkaProduceConfig {
 
 生产者（按照时间顺序发送）：
 
-- http://localhost:8011/topicLong/message/send?key=a&message=1 （流A）
-- http://localhost:8011/topicDouble/message/send?key=a&message=1.1  （流B）
-- http://localhost:8011/topicDouble/message/send?key=a&message=1.2  （流B）
-- http://localhost:8011/topicDouble/message/send?key=a&message=1.3  （流B）
-- http://localhost:8011/topicLong/message/send?key=a&message=2  （流A）
-- http://localhost:8011/topicDouble/message/send?key=a&message=1.4  （流B）
+- http://localhost:8011/topicLong/message/send?key=a&message=1 （left流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.1  （right流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.2  （right流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.3  （right流）
+- http://localhost:8011/topicLong/message/send?key=a&message=2  （left流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.4  （right流）
+- http://localhost:8011/topicLong/message/send?key=b&message=2  （left流,匹配不到right流）
+- http://localhost:8011/topicDouble/message/send?key=c&message=1.4  （right流，匹配不到left流）
 
 消费者：
 
-- consumeA: topic = topicA, offset = 84, value = left=1, right=1.1 
-- consumeA: topic = topicA, offset = 85, value = left=1, right=1.2 
-- consumeA: topic = topicA, offset = 86, value = left=1, right=1.3 
-- consumeA: topic = topicA, offset = 87, value = left=2, right=1.1 
-- consumeA: topic = topicA, offset = 88, value = left=2, right=1.2 
-- consumeA: topic = topicA, offset = 89, value = left=2, right=1.3 
-- consumeA: topic = topicA, offset = 90, value = left=1, right=1.4 
-- consumeA: topic = topicA, offset = 91, value = left=2, right=1.4 
+- consumeA: topic = topicA, value = left=1, right=1.1 
+- consumeA: topic = topicA, value = left=1, right=1.2 
+- consumeA: topic = topicA, value = left=1, right=1.3 
+- consumeA: topic = topicA, value = left=2, right=1.1 
+- consumeA: topic = topicA, value = left=2, right=1.2 
+- consumeA: topic = topicA, value = left=2, right=1.3 
+- consumeA: topic = topicA, value = left=1, right=1.4 
+- consumeA: topic = topicA, value = left=2, right=1.4 
+
+生产者发送的最后两条左流匹配不到右流和右流匹配不到左流的记录均不连接
+
+### StreamStreamLeftJoinApp
+
+由于是流与流的连接，仍然需要是基于窗口的
+
+left join与inner join 最大的区别就是左边流的记录key匹配不到右边的key的时候，将会触发
+ValueJoiner#apply(leftRecord.value, null)
+即只要左流有，不管右流有没有都匹配，没有则匹配空
+
+使用leftJoin方法
+```
+KStream<String, String> joinedStream = leftStream.leftJoin(rightStream,
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue, /* ValueJoiner */
+			    JoinWindows.of(TimeUnit.MINUTES.toMillis(2)),
+			    Joined.with(
+			      Serdes.String(), /* key */
+			      Serdes.Long(),   /* left value */
+			      Serdes.Double())  /* right value */
+			  );
+```
+生产者（按照时间顺序发送）：
+
+- http://localhost:8011/topicLong/message/send?key=a&message=1 （left流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.1  （right流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.2  （right流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.3  （right流）
+- http://localhost:8011/topicLong/message/send?key=a&message=2  （left流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.4  （right流）
+- **http://localhost:8011/topicLong/message/send?key=b&message=2**  （left流,匹配不到right流）
+- http://localhost:8011/topicDouble/message/send?key=c&message=1.4  （right流，匹配不到left流）
+
+消费者：
+
+- consumeA: topic = topicA, value = left=1, right=1.1 
+- consumeA: topic = topicA, value = left=1, right=1.2 
+- consumeA: topic = topicA, value = left=1, right=1.3 
+- consumeA: topic = topicA, value = left=2, right=1.1 
+- consumeA: topic = topicA, value = left=2, right=1.2 
+- consumeA: topic = topicA, value = left=2, right=1.3 
+- consumeA: topic = topicA, value = left=1, right=1.4 
+- consumeA: topic = topicA, value = left=2, right=1.4 
+- **consumeA: topic = topicA, value = left=2, right=null** 
+
+### StreamStreamOuterJoinApp
+
+由于是流与流的连接，仍然需要是基于窗口的
+
+outer join与inner join/left join 最大的区别就是
+
+1.左边流的记录key匹配不到右边的key的时候，将会触发ValueJoiner#apply(leftRecord.value, null)
+即只要左流有，不管右流有没有都匹配，没有则匹配空
+2. 右边流的记录key匹配步到左边的key的时候，将会触发ValueJoiner#apply(null, rightRecord.value)
+即只要右流有，不管左流有没有都匹配，没有则匹配空
+
+
+使用outerJoin方法
+```
+KStream<String, String> joinedStream = leftStream.outerJoin(rightStream,
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue, /* ValueJoiner */
+			    JoinWindows.of(TimeUnit.MINUTES.toMillis(2)),
+			    Joined.with(
+			      Serdes.String(), /* key */
+			      Serdes.Long(),   /* left value */
+			      Serdes.Double())  /* right value */
+			  );
+```
+
+生产者（按照时间顺序发送）：
+
+- http://localhost:8011/topicLong/message/send?key=a&message=1 （left流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.1  （right流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.2  （right流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.3  （right流）
+- http://localhost:8011/topicLong/message/send?key=a&message=2  （left流）
+- http://localhost:8011/topicDouble/message/send?key=a&message=1.4  （right流）
+- **http://localhost:8011/topicLong/message/send?key=b&message=2**  （left流,匹配不到right流）
+- **http://localhost:8011/topicDouble/message/send?key=c&message=1.4**  （right流，匹配不到left流）
+
+消费者：
+
+- consumeA: topic = topicA, value = left=1, right=1.1 
+- consumeA: topic = topicA, value = left=1, right=1.2 
+- consumeA: topic = topicA, value = left=1, right=1.3 
+- consumeA: topic = topicA, value = left=2, right=1.1 
+- consumeA: topic = topicA, value = left=2, right=1.2 
+- consumeA: topic = topicA, value = left=2, right=1.3 
+- consumeA: topic = topicA, value = left=1, right=1.4 
+- consumeA: topic = topicA, value = left=2, right=1.4 
+- **consumeA: topic = topicA, value = left=2, right=null** 
+- **consumeA: topic = topicA, value = left=null, right=1.4** 
+
+
+
 
 
 
