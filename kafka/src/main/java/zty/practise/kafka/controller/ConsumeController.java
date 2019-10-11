@@ -25,7 +25,7 @@ public class ConsumeController {
         System.out.printf("consumeC: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
     }
 	
-	@KafkaListener(topics = "topicD")
+	@KafkaListener(topics = "topicD", containerFactory="myListenerContainerFactory")
     public void onMessageD(ConsumerRecord<?, ?> record) throws Exception {
         System.out.printf("consumeD: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
     }

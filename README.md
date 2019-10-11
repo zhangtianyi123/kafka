@@ -1,5 +1,6 @@
 # Kafka and Kafka Stream
 
+
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -1348,4 +1349,73 @@ KStream<String, String> joinedStream = leftStream.leftJoin(rightGlobalTable,
 - 连接消费consumeA: topic = topicA, value = left=3, right=1.3 
 
 
+### processApp
+
+通过流的**process**操作打印记录，再tongguomap将值转大写
+
+```
+public class ProcessApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "process_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+		props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		KStream<String, String> inputStream = builder.stream("topicA");
+
+		// 创建状态存储
+		StoreBuilder<KeyValueStore<String, String>> keyValueStoreBuilder = Stores.keyValueStoreBuilder(
+				Stores.persistentKeyValueStore("myProcessorState"), Serdes.String(), Serdes.String());
+
+		//注册状态存储
+		builder.addStateStore(keyValueStoreBuilder);
+		 
+		//流执行自定义的process
+		inputStream.process(new ProcessorSupplier<String, String>() {
+		     public Processor<String, String> get() {
+		         return new MyProcess();
+		        }
+		 }, "myProcessorState");
+		
+		KStream outputStream = inputStream.mapValues(s -> s.toUpperCase());
+		
+		outputStream.to("topicD", Produced.with(Serdes.String(), Serdes.String()));
+
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+		streams.start();
+	}
+	
+	static class MyProcess implements Processor<String, String> {
+
+		private StateStore state;
+		
+		@Override
+		public void init(ProcessorContext context) {
+			this.state = context.getStateStore("myProcessorState");
+            context.schedule(1000, PunctuationType.WALL_CLOCK_TIME, (timestamp) -> System.out.println());
+		}
+
+		@Override
+		public void process(String key, String value) {
+			System.out.println("###key=" + key + ", value=" + value);
+		}
+
+		@Override
+		public void close() {
+			System.out.println("close");
+		}
+		
+	}
+}
+```
+
+- 生产TopicA:http://localhost:8011/message/sendwithkey?message=xx&key=yy
+- 流计算process打印结果：###key=yy, value=xx
+- 消费端TopicD:topic = topicD, value = XX
+
+
+ 
   [1]: http://static.zybuluo.com/zhangtianyi/e6quts74wyf2ljunkmmng90b/image_1dmo5gg2v1kntevia08svd1rq69.png
