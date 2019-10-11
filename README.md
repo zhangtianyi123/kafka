@@ -1,6 +1,5 @@
 # Kafka and Kafka Stream
 
-
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -1191,6 +1190,102 @@ KTable<String, String> joinedTable = leftTable.outerJoin(rightTable,
 - consumeA: topic = topicA, value = left=1, right=null 
 - 右流生产(y,1.1)
 - consumeA: topic = topicA, value = left=null, right=1.1 
+
+**KStreamKTableInnerJoin**
+
+仅仅左侧（流）的输入记录会触发连接，右侧（表）的输入记录仅仅更新其自身的连接状态
+
+左流：null key 和 null value 都将被忽略，key相同的记录被连接
+
+右表：空值被解释为对应key的删除，从表中删除，不会触发连接
+
+- 流表连接仍然得到流，只不过进行了查表
+
+```
+public class StreamTableInnerJoinApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "tabletableinnerjoin_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+
+		KStream<String, Long> leftStream = builder.stream("topicLong", Consumed.with(Serdes.String(), Serdes.Long()));
+		KTable<String, Double> rightTable = builder.table("topicDouble", Consumed.with(Serdes.String(), Serdes.Double()));
+		
+		KStream<String, String> joinedStream = leftStream.join(rightTable,
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue, 
+			    Joined.keySerde(Serdes.String()) /* key */
+			      .valueSerde(Serdes.Long()) /* left value */);
+		
+		joinedStream.to("topicA", Produced.with(Serdes.String(), Serdes.String()));
+		
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+        
+	}
+}
+```
+
+- 左流生产  (stn,1)
+- 连接消费无
+- 右流生产（stn, 1.1）
+- 连接消费无
+- 右流生产（stn, 1.2）
+- 连接消费无
+- 右流生产（stn, 1.3）
+- 连接消费无
+ - 右表的输入不会触发连接 
+- 左流生产 （stn,2）
+- 连接消费consumeA: topic = topicA, value = left=2, right=1.3 
+ - 左流连接到的是表的最新快照 
+- 左流生产 (stn, null)
+- 连接消费无
+ - 流的空值被忽略 
+- 右流生产（stn, null）
+- 连接消费无
+ - 表的空值不会连接，但是会删除键 
+- 左流生产 (stn, 1)
+- 连接消费无
+- 右流生产 (stn, 1.5)
+- 连接消费无
+- 左流生产（stn, 1）
+- 连接消费consumeA: topic = topicA, value = left=1, right=1.5 
+
+
+**KStreamKTableLeftJoin**
+
+流表的左连接与内连接，类似。对于左流来说，空值和空键仍然会被忽略，对于右表来说，空值虽然不会触发连接，但是会从表中删除键
+
+而左连接与内连接不同的点在于，当左流的键匹配不到右流的键的时候，会触发ValueJoiner#apply(leftRecord.value, null)  形成输出
+
+```
+KStream<String, String> joinedStream = leftStream.leftJoin(rightTable,
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue, 
+			    Joined.keySerde(Serdes.String()) /* key */
+			      .valueSerde(Serdes.Long()) /* left value */);
+```
+
+- 左流生产  (ste,1)
+- 连接消费:consumeA: topic = topicA, value = left=1, right=null 
+ - 展示了左连接的特性  
+- 右流生产（ste, 1.1）
+- 连接消费无
+- 左流生产  (ste,2)
+- 连接消费：consumeA: topic = topicA, value = left=2, right=1.1 
+
+
+> 流与表不存在外连接，因为不可能出现，表去匹配流的情况
+
+
+
+
+
+
+
 
 
   [1]: http://static.zybuluo.com/zhangtianyi/e6quts74wyf2ljunkmmng90b/image_1dmo5gg2v1kntevia08svd1rq69.png
