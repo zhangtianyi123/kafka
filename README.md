@@ -1101,7 +1101,7 @@ KStream<String, String> joinedStream = leftStream.outerJoin(rightStream,
 
 <br />
 
-**KTable-KTable Inner Join**
+### TableTableInnerJoinApp
 
 表表连接总是基于非窗的，连接的结果是一个新的KTable
 这个结果表是一个不断更新的结果表，存储最新结果
@@ -1159,7 +1159,7 @@ public class TableTableInnerJoinApp {
  - 右流生产(a,null)的时候将数据a删除了，所以后面左流最后一次生产(a,2)匹配不到
 
 
-**KTable-KTable Left Join**
+### TableTableLeftJoinApp
 
 表与表的左连接与内连接类似
 特殊点在于如果左边的记录（key）在右边流中没有匹配，将调用ValueJoiner#apply(leftRecord.value, null)
@@ -1176,7 +1176,7 @@ KTable<String, String> joinedTable = leftTable.leftJoin(rightTable,
 - 消费无
 
 
-**KTable-KTable Outer Join**
+### TableTableOuterJoinApp
 
 不管是表表的左连接还是外连接。其实都是相对于流流的连接把握两个特性，一个是表的特性（更新，删除）一个是左连接/外连接的特性（左匹配空/左右匹配空）
 
@@ -1191,7 +1191,7 @@ KTable<String, String> joinedTable = leftTable.outerJoin(rightTable,
 - 右流生产(y,1.1)
 - consumeA: topic = topicA, value = left=null, right=1.1 
 
-**KStreamKTableInnerJoin**
+### StreamTableInnerJoinApp
 
 仅仅左侧（流）的输入记录会触发连接，右侧（表）的输入记录仅仅更新其自身的连接状态
 
@@ -1256,7 +1256,7 @@ public class StreamTableInnerJoinApp {
 - 连接消费consumeA: topic = topicA, value = left=1, right=1.5 
 
 
-**KStreamKTableLeftJoin**
+### StreamTableLeftJoinApp
 
 流表的左连接与内连接，类似。对于左流来说，空值和空键仍然会被忽略，对于右表来说，空值虽然不会触发连接，但是会从表中删除键
 
@@ -1281,11 +1281,71 @@ KStream<String, String> joinedStream = leftStream.leftJoin(rightTable,
 > 流与表不存在外连接，因为不可能出现，表去匹配流的情况
 
 
+### KStreamGlobalKTableInnerJoin
+
+KStream-GlobalKTable 仍然是非窗口连接
+
+允许从KStream接收到新记录以后，对GlobalKTable（整个changelog）执行查找
+
+KStream-GlobalKTable联接与KStream-KTable联接非常相似，但也有一些不同，比如不需要数据的co-partitioning
+
+仅仅流的记录输入会触发连接，表的输入不会触发连接，只会更新表自己的数据
+
+流输入空键和空值都会被忽略
+
+表输入空值不会触发连接，但是会删除自身的键
+
+```
+/**
+* 通过变更的key来执行查找，查找比原key多一个#的表数据
+*/
+KStream<String, String> joinedStream = leftStream.join(rightGlobalTable,
+				 (leftKey, leftValue) -> leftKey + "#",
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue);
+		
+```
+
+- 左流生产(sgn,1)
+- 连接消费：无
+- 右表生产(sgn#, 1.1)
+- 连接消费无
+- 左流生产(sgn#,2)
+- 连接消费无
+- 左流生产(sgn, 2)
+- 连接消费consumeA: topic = topicA, value = left=2, right=1.1 
+- 右表生产(sgn#, 1.2)
+- 连接消费无
+- 右表生产(sgn#, 1.3)
+- 连接消费无
+- 左流生产(sgn, 3)
+- 连接消费consumeA: topic = topicA, value = left=3, right=1.3 
 
 
+### KStreamGlobalKTableLeftJoin
 
+```
+/**
+* 通过变更的key来执行查找，查找比原key多一个#的表数据
+*/
+KStream<String, String> joinedStream = leftStream.leftJoin(rightGlobalTable,
+				 (leftKey, leftValue) -> leftKey + "#",
+			    (leftValue, rightValue) -> "left=" + leftValue + ", right=" + rightValue);
+```
 
-
+- 左流生产(sge,1)
+- 连接消费：consumeA: topic = topicA, value = left=1, right=null 
+- 右表生产(sge#, 1.1)
+- 连接消费无
+- 左流生产(sge#,2)
+- 连接消费consumeA: topic = topicA, value = left=2, right=null 
+- 左流生产(sge, 2)
+- 连接消费consumeA: topic = topicA, value = left=2, right=1.1 
+- 右表生产(sge#, 1.2)
+- 连接消费无
+- 右表生产(sge#, 1.3)
+- 连接消费无
+- 左流生产(sge, 3)
+- 连接消费consumeA: topic = topicA, value = left=3, right=1.3 
 
 
   [1]: http://static.zybuluo.com/zhangtianyi/e6quts74wyf2ljunkmmng90b/image_1dmo5gg2v1kntevia08svd1rq69.png
