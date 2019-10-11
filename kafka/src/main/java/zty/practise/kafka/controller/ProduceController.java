@@ -61,4 +61,10 @@ public class ProduceController {
 		kafkaStringDoubleTemplate.send("topicDouble", key, StringUtils.isEmpty(message)? null : Double.valueOf(message));
         return "send success: " + message;
     }
+	
+	@GetMapping("/topicTransfer/message/send")
+    public String sendToTransfer(String key, String message){
+		kafkaStringStringTemplate.send("topicTransfer", key, message);
+        return "send success: " + key + message;
+    }
 }

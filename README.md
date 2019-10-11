@@ -1,6 +1,5 @@
 # Kafka and Kafka Stream
 
-
 ---
 
 安装，启动kafka （创建分区，开启防火墙等工作略）
@@ -1416,6 +1415,78 @@ public class ProcessApp {
 - 流计算process打印结果：###key=yy, value=xx
 - 消费端TopicD:topic = topicD, value = XX
 
+### transferApp
 
+transform 将应用于每个记录
+
+每个输入记录被转换零个，一个或多个输出记录（类似于无状态flatMap）
+
+可以修改记录的键和值，包括其类型
+
+使用transformValues不会导致数据重新分区
+
+```
+public class transferApp {
+
+	public static void main(String[] args) {
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "transfer_app_id");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.192.202:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+		props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		KStream<String, String> inputStream = builder.stream("topicTransfer");
+
+		// 创建状态存储
+		StoreBuilder<KeyValueStore<String, String>> keyValueStoreBuilder = Stores.keyValueStoreBuilder(
+				Stores.persistentKeyValueStore("myTransformState"), Serdes.String(), Serdes.String());
+
+		//注册状态存储
+		builder.addStateStore(keyValueStoreBuilder);
+		 
+		//流执行自定义的transform
+		KStream<String, String> outputStream = inputStream.transform(new TransformerSupplier<String, String, KeyValue<String, String>>() {
+		     public Transformer<String, String, KeyValue<String, String>> get() {
+		         return new MyTransformer();
+		        }
+		 }, "myTransformState");
+		
+		outputStream.to("topicD", Produced.with(Serdes.String(), Serdes.String()));
+
+		KafkaStreams streams = new KafkaStreams(builder.build(), props);
+		streams.start();
+	}
+
+	static class MyTransformer implements Transformer<String, String, KeyValue<String, String>> {
+
+		private ProcessorContext context;
+		private StateStore state;
+
+		@Override
+		public void init(ProcessorContext context) {
+			this.context = context;
+			this.state = context.getStateStore("myTransformState");
+			context.schedule(1000, PunctuationType.WALL_CLOCK_TIME, (timestamp) -> System.out.println());
+		}
+
+		@Override
+		public KeyValue<String, String> transform(String key, String value) {
+			System.out.println("lower=" + key.toLowerCase() + ", upper=" + value.toUpperCase());
+			return new KeyValue<String, String>("lower=" + key.toLowerCase(), "upper=" + value.toUpperCase());
+		}
+
+		@Override
+		public void close() {
+		}
+
+	}
+}
+
+```
+
+- 生产者：http://localhost:8011/topicTransfer/message/send?key=Hello&message=Zhangty
+- 流计算打印：lower=hello, upper=ZHANGTY
+- 输出流消费：consumeD: topic = topicD, key = lower=hello, value = upper=ZHANGTY 
  
   [1]: http://static.zybuluo.com/zhangtianyi/e6quts74wyf2ljunkmmng90b/image_1dmo5gg2v1kntevia08svd1rq69.png

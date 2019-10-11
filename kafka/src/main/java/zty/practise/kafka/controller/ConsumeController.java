@@ -12,22 +12,22 @@ public class ConsumeController {
 
 	@KafkaListener(topics = "topicA", containerFactory="myListenerContainerFactory")
     public void onMessageA(ConsumerRecord<?, ?> record) throws Exception {
-        System.out.printf("consumeA: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
+        System.out.printf("consumeA: topic = %s, key = %s, value = %s \n", record.topic(), record.key(), record.value());
     }
 	
 	@KafkaListener(topics = "topicB")
     public void onMessageB(ConsumerRecord<?, ?> record) throws Exception {
-        System.out.printf("consumeB: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
+        System.out.printf("consumeB: topic = %s, key = %s, value = %s \n", record.topic(), record.key(), record.value());
     }
 	
 	@KafkaListener(topics = "topicC")
     public void onMessageC(ConsumerRecord<?, ?> record) throws Exception {
-        System.out.printf("consumeC: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
+        System.out.printf("consumeC: topic = %s, key = %s, value = %s \n", record.topic(), record.key(), record.value());
     }
 	
 	@KafkaListener(topics = "topicD", containerFactory="myListenerContainerFactory")
     public void onMessageD(ConsumerRecord<?, ?> record) throws Exception {
-        System.out.printf("consumeD: topic = %s, offset = %d, value = %s \n", record.topic(), record.offset(), record.value());
+        System.out.printf("consumeD: topic = %s, key = %s, value = %s \n", record.topic(), record.key(), record.value());
     }
 	
 	@KafkaListener(topics = "topicE")

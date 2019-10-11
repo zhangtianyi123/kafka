@@ -28,7 +28,7 @@ public class transferApp {
 		props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
 		StreamsBuilder builder = new StreamsBuilder();
-		KStream<String, String> inputStream = builder.stream("topicA");
+		KStream<String, String> inputStream = builder.stream("topicTransfer");
 
 		// 创建状态存储
 		StoreBuilder<KeyValueStore<String, String>> keyValueStoreBuilder = Stores.keyValueStoreBuilder(
@@ -64,7 +64,8 @@ public class transferApp {
 
 		@Override
 		public KeyValue<String, String> transform(String key, String value) {
-			return new KeyValue<String, String>("lower=" + key.toLowerCase(), "upper=" + value);
+			System.out.println("lower=" + key.toLowerCase() + ", upper=" + value.toUpperCase());
+			return new KeyValue<String, String>("lower=" + key.toLowerCase(), "upper=" + value.toUpperCase());
 		}
 
 		@Override
