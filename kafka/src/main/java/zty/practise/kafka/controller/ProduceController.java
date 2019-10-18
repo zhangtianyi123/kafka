@@ -20,6 +20,9 @@ public class ProduceController {
 	@Autowired
     private KafkaTemplate<String, Double> kafkaStringDoubleTemplate;
 	
+	@Autowired
+    private KafkaTemplate<String, String> kafkaStringStringAndInterceptorTemplate;
+	
 	@GetMapping("/message/send")
     public String send(@RequestParam String message){
 		kafkaStringStringTemplate.send("topicA",message);
@@ -66,5 +69,11 @@ public class ProduceController {
     public String sendToTransfer(String key, String message){
 		kafkaStringStringTemplate.send("topicTransfer", key, message);
         return "send success: " + key + message;
+    }
+	
+	@GetMapping("/message/sendandinteceptor")
+    public String sendandinteceptor(@RequestParam String message){
+		kafkaStringStringAndInterceptorTemplate.send("topicA",message);
+        return "send success: " + message;
     }
 }

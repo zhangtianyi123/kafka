@@ -62,6 +62,86 @@ public class ConsumeController {
 生产端：http://localhost:8011/message/send?message=asdcd
 消费端：consumeA: topic = topicA, offset = 0, value = asdcd
 
+## Kafka
+
+### kafka拦截器
+
+kafka的拦截器分为生产者拦截器和消费者拦截器，可以在生产和消费的前后做一些可拔插的拦截逻辑。比如在发送时嵌入时间戳，消费的时候就能获取到kafka端到端花费的时间
+比如在生产时插入顺序的序号，消费时就可以校验消息的顺序性。
+
+生产者：
+```
+public class SeqNumProducerInterceptor implements ProducerInterceptor {
+
+	static int seqNum = 0;
+
+	/**
+	 * 方法封装进KafkaProducer.send方法中，即它运行在用户主线程中的。
+	 * Producer确保在消息被序列化以计算分区前调用该方法。
+	 * 可以在该方法中对消息做任何操作，但最好保证不要修改消息所属的topic和分区，否则会影响目标分区的计算
+	 */
+	@Override
+	public ProducerRecord onSend(ProducerRecord record) {
+		 return new ProducerRecord(record.topic(), record.partition(), record.timestamp(), String.valueOf(seqNum++), record.value());
+	}
+
+}
+```
+
+生产者配置#KafkaProduceConfig
+
+```
+List<String> interceptors = Lists.newArrayList();
+//增加序号的拦截器
+interceptors.add("zty.practise.kafka.interceptor.SeqNumProducerInterceptor"); 
+propsMap.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+```
+
+消费者拦截器
+
+```
+public class SeqNumConsumerInterceptor implements ConsumerInterceptor<String, String> {
+
+	static int preNum = 0;
+
+	/**
+	 * 消费者在正式处理消息之前调用
+	 * 对（一批）消息处理
+	 */
+	@Override
+	public ConsumerRecords<String, String> onConsume(ConsumerRecords<String, String> records) {
+		for(ConsumerRecord<String, String> record : records) {
+			checkOrder(record.key());
+		}
+		
+		return records;
+	}
+	
+	/**
+	 * 检查消息的顺序性
+	 */
+	private void checkOrder(String key) {
+		if(StringUtils.equals("0", key) || StringUtils.equals(String.valueOf(++preNum), key)) {
+			System.out.println(key + "顺序正确");
+		} else {
+			System.out.println(key + "顺序错误");
+		}
+	}
+}
+
+```
+
+消费者配置#KafkaConsumeConfig
+
+```
+List<String> interceptors = Lists.newArrayList();
+//检查消息顺序的拦截器
+interceptors.add("zty.practise.kafka.interceptor.SeqNumConsumerInterceptor"); 
+propsMap.put(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+```
+
+## Kafka Stream
+
 ### StreamUpperApp
 
 启动Kafka Stream StreamUpperApp应用，通过**mapValues**执行转为大写的转换
@@ -1488,5 +1568,11 @@ public class transferApp {
 - 生产者：http://localhost:8011/topicTransfer/message/send?key=Hello&message=Zhangty
 - 流计算打印：lower=hello, upper=ZHANGTY
 - 输出流消费：consumeD: topic = topicD, key = lower=hello, value = upper=ZHANGTY 
+
+
+
+
+
+
  
   [1]: http://static.zybuluo.com/zhangtianyi/e6quts74wyf2ljunkmmng90b/image_1dmo5gg2v1kntevia08svd1rq69.png

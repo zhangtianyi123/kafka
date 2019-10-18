@@ -1,5 +1,6 @@
 package zty.practise.kafka.config;
 
+import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -15,6 +16,7 @@ import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import zty.practise.kafka.model.RequestEntity;
@@ -76,6 +78,16 @@ public class KafkaProduceConfig {
 		return new DefaultKafkaProducerFactory<>(setStringRequestEntitySerializerConfig());
 	}
 	
+	@Bean
+	public KafkaTemplate<String, String> kafkaStringStringAndInterceptorTemplate() {
+		return new KafkaTemplate<>(producerStringStringAndInterceptorFactory());
+	}
+	
+	@Bean
+	public ProducerFactory<String, String> producerStringStringAndInterceptorFactory() {
+		return new DefaultKafkaProducerFactory<>(setStringStringSerializerAndInterceptorConfig());
+	}
+	
 	/**
 	 * 通用配置
 	 * 
@@ -133,6 +145,24 @@ public class KafkaProduceConfig {
 
 		propsMap.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
 		propsMap.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RequestEntitySerializer.class);
+		return propsMap;
+	}
+	
+	/**
+	 * 序列化配置-StringString并且怎加生产者拦截器
+	 */
+	private Map<String, Object> setStringStringSerializerAndInterceptorConfig() {
+		Map<String, Object> propsMap = Maps.newHashMap();
+		produceComnConfigs(propsMap);
+
+		propsMap.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		propsMap.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		
+		List<String> interceptors = Lists.newArrayList();
+		//增加序号的拦截器
+		interceptors.add("zty.practise.kafka.interceptor.SeqNumProducerInterceptor"); 
+		propsMap.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+		
 		return propsMap;
 	}
 }

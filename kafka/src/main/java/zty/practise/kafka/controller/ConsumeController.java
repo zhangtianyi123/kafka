@@ -10,7 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ConsumeController {
 
-	@KafkaListener(topics = "topicA", containerFactory="myListenerContainerFactory")
+	//@KafkaListener(topics = "topicA", containerFactory="myListenerContainerFactory")
+	@KafkaListener(topics = "topicA", containerFactory="myIntereptorListenerContainerFactory")
     public void onMessageA(ConsumerRecord<?, ?> record) throws Exception {
         System.out.printf("consumeA: topic = %s, key = %s, value = %s \n", record.topic(), record.key(), record.value());
     }
